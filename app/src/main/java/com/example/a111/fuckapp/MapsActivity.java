@@ -1,6 +1,8 @@
 package com.example.a111.fuckapp;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
@@ -8,7 +10,11 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.widget.EditText;
 import android.widget.Toast;
+import android.view.View;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -23,6 +29,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import android.content.Context;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
@@ -34,6 +42,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Location mLastLocation;
     Marker mCurrLocationMarker;
     LocationRequest mLocationRequest;
+    static boolean isLabellingActive = false;
+    final Context context = this;
+    private EditText result;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +59,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        result = (EditText) findViewById(R.id.editTextResult);
+
     }
 
 
@@ -77,6 +91,53 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
         }
+        googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener()
+        {
+            @Override
+            public void onMapClick(final LatLng arg0)
+            {
+                if(MapsActivity.isLabellingActive){
+                    // get prompts.xml view
+                    LayoutInflater li = LayoutInflater.from(context);
+                    View promptsView = li.inflate(R.layout.prompts, null);
+
+                    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                            context);
+
+                    // set prompts.xml to alertdialog builder
+                    alertDialogBuilder.setView(promptsView);
+
+                    final EditText userInput = (EditText) promptsView
+                            .findViewById(R.id.editTextDialogUserInput);
+
+                    // set dialog message
+                    alertDialogBuilder
+                            .setCancelable(false)
+                            .setPositiveButton("OK",
+                                    new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog,int id) {
+                                            // get user input and set it to result
+                                            // edit text
+                                            String new_note = arg0.toString()+":"+userInput.getText();
+                                            result.append(new_note);
+                                        }
+                                    })
+                            .setNegativeButton("Cancel",
+                                    new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog,int id) {
+                                            dialog.cancel();
+                                        }
+                                    });
+
+                    // create alert dialog
+                    AlertDialog alertDialog = alertDialogBuilder.create();
+
+                    // show it
+                    alertDialog.show();
+
+                }
+            }
+        });
     }
 
     protected synchronized void buildGoogleApiClient() {
@@ -134,6 +195,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
     }
+
+    /** Called when the user touches the button */
+    public void toggleMapLabellingSession(View view) {
+       this.isLabellingActive = ! this.isLabellingActive; // it's assigned its negation
+    }
+
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
